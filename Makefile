@@ -34,14 +34,14 @@ AVR_CCFLAGS+=-I.
 
 AVR_LDFLAGS+=-Wl,--gc-sections -mmcu=${MCU}
 
-tiny_ssd1306.elf: TinyWire.o twi.o tiny_ssd1306.o 
-	${AVR_CC} ${AVR_LDFLAGS} -Wl,-Map,tiny_ssd1306.map $^ -o $@
+tinyscope.elf: TinyWire.o twi.o tinyscope.o 
+	${AVR_CC} ${AVR_LDFLAGS} -Wl,-Map,tinyscope.map $^ -o $@
 .DUMMY:
 
-tiny_ssd1306.hex: tiny_ssd1306.elf
+tinyscope.hex: tinyscope.elf
 	${AVR_OBJCOPY} -O ihex -R .eeprom $< $@
 
-tiny_ssd1306.eep: tiny_ssd1306.elf
+tinyscope.eep: tinyscope.elf
 	${AVR_OBJCOPY} \
           -O ihex \
           -j .eeprom \
@@ -50,21 +50,21 @@ tiny_ssd1306.eep: tiny_ssd1306.elf
           --change-section-lma .eeprom=0 \
           $< $@
 
-tiny_ssd1306.o: tiny_ssd1306.cpp
+tinyscope.o: tinyscope.cpp
 	${AVR_CC} ${AVR_CCFLAGS} \
             -c -o $@ $<
 
-tiny_ssd1306.elf.disasm: tiny_ssd1306.elf
+tinyscope.lst: tinyscope.elf
 	${AVR_OBJDUMP} -S -C --disassemble $< > $@
 
-disasm: tiny_ssd1306.elf.disasm
+disasm: tinyscope.lst
 
-flash: tiny_ssd1306.hex
+flash: tinyscope.hex
 	${AVRDUDE} ${AVRDUDE_FLAGS} -v -Uflash:w:$<:i
 
-flash_read: tiny_ssd1306.read.hex
+flash_read: tinyscope.read.hex
 
-tiny_ssd1306.read.hex: .DUMMY
+tinyscope.read.hex: .DUMMY
 	${AVRDUDE} ${AVRDUDE_FLAGS} -v -Uflash:r:$@:i
 
 TinyWire.o: ${TINYWIRE}/TinyWire.cpp
@@ -76,9 +76,9 @@ clean:
 	rm -f \
           ${TINYWIRE}/TinyWire.o \
           ${TINYWIRE}/twi.o \
-          tiny_ssd1306.o \
-          tiny_ssd1306.elf \
-          tiny_ssd1306.hex \
-          tiny_ssd1306.eep \
-          tiny_ssd1306.map \
-          tiny_ssd1306.elf.disasm
+          tinyscope.o \
+          tinyscope.elf \
+          tinyscope.hex \
+          tinyscope.eep \
+          tinyscope.map \
+          tinyscope.elf.disasm
