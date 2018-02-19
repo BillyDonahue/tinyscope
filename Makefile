@@ -14,15 +14,24 @@ AVRDUDE_FLAGS+=-C${AVRDUDE_CONF}
 AVRDUDE_FLAGS+=-cusbtiny
 AVRDUDE_FLAGS+=-pattiny85 
 
+MCU=attiny85
+
 AVR_LDFLAGS=-Llibraries
 AVR_CCFLAGS+=-Os
 AVR_CCFLAGS+=-g
-AVR_CCFLAGS+=-std=gnu99
-AVR_CCFLAGS+=-mmcu=attiny85
+AVR_CCFLAGS+=-std=c++11
+AVR_CCFLAGS+=-mmcu=${MCU}
 AVR_CCFLAGS+=-DF_CPU=8000000UL
+AVR_CCFLAGS+=-Wall
+AVR_CCFLAGS+=-funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums
+AVR_CCFLAGS+=-ffunction-sections -fdata-sections
+AVR_CCFLAGS+=-DBAUD=9600UL
+AVR_CCFLAGS+=-I.
+
+AVR_LDFLAGS+=-Wl,--gc-sections -mmcu=${MCU}
 
 tiny_ssd1306.elf: tiny_ssd1306.o
-	avr-gcc -Wl,-Map,tiny_ssd1306.map -Wl,--gc-sections  -mmcu=attiny85 $< -o $@
+	${AVR_CC} ${AVR_LDFLAGS} -Wl,-Map,tiny_ssd1306.map $< -o $@
 
 .DUMMY:
 
@@ -38,10 +47,9 @@ tiny_ssd1306.eep: tiny_ssd1306.elf
           --change-section-lma .eeprom=0 \
           $< $@
 
-tiny_ssd1306.o: tiny_ssd1306.c
-	avr-gcc -Os -g -std=gnu99 -Wall \
-            -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums  -ffunction-sections -fdata-sections \
-            -DF_CPU=8000000UL -DBAUD=9600UL -I. -mmcu=attiny85 -c -o $@ $<
+tiny_ssd1306.o: tiny_ssd1306.cpp
+	${AVR_CC} ${AVR_CCFLAGS} \
+            -c -o $@ $<
 
 tiny_ssd1306.elf.disasm: tiny_ssd1306.elf
 	${AVR_OBJDUMP} -S -C --disassemble $< > $@
@@ -62,4 +70,5 @@ clean:
           tiny_ssd1306.elf \
           tiny_ssd1306.hex \
           tiny_ssd1306.eep \
-          tiny_ssd1306.map
+          tiny_ssd1306.map \
+          tiny_ssd1306.elf.disasm
