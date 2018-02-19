@@ -1,4 +1,6 @@
 
+TINYWIRE=libraries/TinyWire
+
 AVR_ROOT=/usr/local
 AVR_CC=${AVR_ROOT}/bin/avr-gcc
 AVR_LD=${AVR_ROOT}/bin/avr-gcc
@@ -17,6 +19,7 @@ AVRDUDE_FLAGS+=-pattiny85
 MCU=attiny85
 
 AVR_LDFLAGS=-Llibraries
+AVR_CCFLAGS=-Ilibraries
 AVR_CCFLAGS+=-Os
 AVR_CCFLAGS+=-g
 AVR_CCFLAGS+=-std=c++11
@@ -28,11 +31,11 @@ AVR_CCFLAGS+=-ffunction-sections -fdata-sections
 AVR_CCFLAGS+=-DBAUD=9600UL
 AVR_CCFLAGS+=-I.
 
+
 AVR_LDFLAGS+=-Wl,--gc-sections -mmcu=${MCU}
 
-tiny_ssd1306.elf: tiny_ssd1306.o
-	${AVR_CC} ${AVR_LDFLAGS} -Wl,-Map,tiny_ssd1306.map $< -o $@
-
+tiny_ssd1306.elf: TinyWire.o twi.o tiny_ssd1306.o 
+	${AVR_CC} ${AVR_LDFLAGS} -Wl,-Map,tiny_ssd1306.map $^ -o $@
 .DUMMY:
 
 tiny_ssd1306.hex: tiny_ssd1306.elf
@@ -64,8 +67,15 @@ flash_read: tiny_ssd1306.read.hex
 tiny_ssd1306.read.hex: .DUMMY
 	${AVRDUDE} ${AVRDUDE_FLAGS} -v -Uflash:r:$@:i
 
+TinyWire.o: ${TINYWIRE}/TinyWire.cpp
+	${AVR_CC} ${AVR_CCFLAGS} -c -o $@ $<
+twi.o: ${TINYWIRE}/twi.cpp
+	${AVR_CC} ${AVR_CCFLAGS} -c -o $@ $<
+
 clean:
 	rm -f \
+          ${TINYWIRE}/TinyWire.o \
+          ${TINYWIRE}/twi.o \
           tiny_ssd1306.o \
           tiny_ssd1306.elf \
           tiny_ssd1306.hex \
