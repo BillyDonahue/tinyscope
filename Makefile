@@ -1,30 +1,65 @@
 
-AVR_ROOT=/usr/local/CrossPack-AVR
-AVR_CXX=${AVR_ROOT}/bin/avr-g++
-AVR_LD=${AVR_ROOT}/bin/avr-ld
+AVR_ROOT=/usr/local
+AVR_CC=${AVR_ROOT}/bin/avr-gcc
+AVR_LD=${AVR_ROOT}/bin/avr-gcc
 AVR_OBJCOPY=${AVR_ROOT}/bin/avr-objcopy
-AVRDUDE=${AVR_ROOT}/bin/avrdude -c usbtiny -p attiny85 
+AVR_OBJDUMP=${AVR_ROOT}/bin/avr-objdump
+
+ARDUINO_JAVA=/Applications/Arduino.app/Contents/Java
+AVRDUDE_ROOT=${ARDUINO_JAVA}/hardware/tools/avr
+AVRDUDE=${AVRDUDE_ROOT}/bin/avrdude
+AVRDUDE_CONF=${AVRDUDE_ROOT}/etc/avrdude.conf
+
+AVRDUDE_FLAGS+=-C${AVRDUDE_CONF}
+AVRDUDE_FLAGS+=-cusbtiny
+AVRDUDE_FLAGS+=-pattiny85 
 
 AVR_LDFLAGS=-Llibraries
-AVR_CXXFLAGS=-std=c++11 -O2 -Ilibraries
+AVR_CCFLAGS+=-Os
+AVR_CCFLAGS+=-g
+AVR_CCFLAGS+=-std=gnu99
+AVR_CCFLAGS+=-mmcu=attiny85
+AVR_CCFLAGS+=-DF_CPU=8000000UL
 
-AVR_CXXFLAGS+=-mmcu=attiny85
-AVR_CXXFLAGS+=-DF_CPU=1000000
+tiny_ssd1306.elf: tiny_ssd1306.o
+	avr-gcc -Wl,-Map,tiny_ssd1306.map -Wl,--gc-sections  -mmcu=attiny85 $< -o $@
 
-tiny_ssd1306.hex: tiny_ssd1306
-	${AVR_OBJCOPY} $< -O ihex $@
+.DUMMY:
 
-tiny_ssd1306: tiny_ssd1306.o
-	${AVR_LD} ${AVR_LDFLAGS} -o $@ $<
+tiny_ssd1306.hex: tiny_ssd1306.elf
+	${AVR_OBJCOPY} -O ihex -R .eeprom $< $@
 
-tiny_ssd1306.o: tiny_ssd1306.cc
-	${AVR_CXX} ${AVR_CXXFLAGS} -c  -o $@ $<
+tiny_ssd1306.eep: tiny_ssd1306.elf
+	${AVR_OBJCOPY} \
+          -O ihex \
+          -j .eeprom \
+          --set-section-flags=.eeprom=alloc,load \
+          --no-change-warnings \
+          --change-section-lma .eeprom=0 \
+          $< $@
 
-dump: tiny_ssd1306
-	avr-objdump --disassemble $<
+tiny_ssd1306.o: tiny_ssd1306.c
+	avr-gcc -Os -g -std=gnu99 -Wall \
+            -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums  -ffunction-sections -fdata-sections \
+            -DF_CPU=8000000UL -DBAUD=9600UL -I. -mmcu=attiny85 -c -o $@ $<
 
-list:
-	${AVRDUDE}
+tiny_ssd1306.elf.disasm: tiny_ssd1306.elf
+	${AVR_OBJDUMP} -S -C --disassemble $< > $@
+
+disasm: tiny_ssd1306.elf.disasm
+
+flash: tiny_ssd1306.hex
+	${AVRDUDE} ${AVRDUDE_FLAGS} -v -Uflash:w:$<:i
+
+flash_read: tiny_ssd1306.read.hex
+
+tiny_ssd1306.read.hex: .DUMMY
+	${AVRDUDE} ${AVRDUDE_FLAGS} -v -Uflash:r:$@:i
 
 clean:
-	rm tiny_ssd1306.o tiny_ssd1306
+	rm -f \
+          tiny_ssd1306.o \
+          tiny_ssd1306.elf \
+          tiny_ssd1306.hex \
+          tiny_ssd1306.eep \
+          tiny_ssd1306.map
